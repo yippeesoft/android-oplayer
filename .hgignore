@@ -1,0 +1,5 @@
+jni/*
+bin/*
+gen/*
+obf/*
+obj/*
