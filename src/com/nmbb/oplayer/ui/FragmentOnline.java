@@ -5,11 +5,13 @@ import java.util.ArrayList;
 import com.nmbb.oplayer.R;
 import com.nmbb.oplayer.ui.base.ArrayAdapter;
 import com.nmbb.oplayer.util.FileUtils;
-import com.nmbb.oplayer.util.StringUtils;
 
+import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -23,6 +25,7 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class FragmentOnline extends FragmentBase implements OnItemClickListener {
 
@@ -34,10 +37,8 @@ public class FragmentOnline extends FragmentBase implements OnItemClickListener 
 	private ListView mListView;
 
 	@Override
-	public View onCreateView(LayoutInflater inflater, ViewGroup container,
-			Bundle savedInstanceState) {
-		View mView = inflater.inflate(R.layout.fragment_online, container,
-				false);
+	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+		View mView = inflater.inflate(R.layout.fragment_online, container, false);
 		mListView = (ListView) mView.findViewById(android.R.id.list);
 		mWebView = (WebView) mView.findViewById(R.id.webview);
 		mListView.setOnItemClickListener(this);
@@ -47,8 +48,7 @@ public class FragmentOnline extends FragmentBase implements OnItemClickListener 
 	}
 
 	@Override
-	public void onItemClick(AdapterView<?> parent, View view, int position,
-			long id) {
+	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 		final String[] f = mOnlineList.get(position);
 		mWebView.loadUrl(f[1]);
 		mListView.setVisibility(View.GONE);
@@ -75,35 +75,45 @@ public class FragmentOnline extends FragmentBase implements OnItemClickListener 
 		mWebView.getSettings().setPluginsEnabled(true);
 
 		mWebView.setWebViewClient(new WebViewClient() {
-			
-			
-			
+
 			@Override
 			public void onPageFinished(WebView view, String url) {
 			};
 
 			/** 页面跳转 */
 			@Override
-			public boolean shouldOverrideUrlLoading(WebView view, String url) {
+			public boolean shouldOverrideUrlLoading(WebView view, final String url) {
 				if (FileUtils.isVideoOrAudio(url)) {
-					Intent intent = new Intent(getActivity(),
-							VideoPlayerActivity.class);
-					intent.putExtra("path", url);
-					startActivity(intent);
+					Dialog dialog = new AlertDialog.Builder(getActivity()).setIcon(android.R.drawable.btn_star).setTitle("播放/下载").setMessage(url).setPositiveButton("播放", new OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {
+							Intent intent = new Intent(getActivity(), VideoPlayerActivity.class);
+							intent.putExtra("path", url);
+							startActivity(intent);
+						}
+					}).setNeutralButton("下载", new OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {
+							MainFragmentActivity activity = (MainFragmentActivity) getActivity();
+							activity.mFileDownload.newDownloadFile(url);
+							Toast.makeText(getActivity(), "正在下载 .." + FileUtils.getUrlFileName(url) + " ，可从本地视频查看进度！", Toast.LENGTH_LONG).show();
+						}
+					}).setNegativeButton("取消", null).create();
+					dialog.show();
 					return true;
 				}
 				return false;
 			};
 		});
-		
+
 		mWebView.setOnKeyListener(new OnKeyListener() {
 			private String host;
+
 			@Override
 			public boolean onKey(View v, int keyCode, KeyEvent event) {
-				if ((keyCode == KeyEvent.KEYCODE_BACK) && mWebView != null
-						&& mWebView.canGoBack()) {
-//					if(StringUtils.isEmpty(host) || host.equals(object))
-//					Uri.parse(url).getHost()
+				if ((keyCode == KeyEvent.KEYCODE_BACK) && mWebView != null && mWebView.canGoBack()) {
+					//					if(StringUtils.isEmpty(host) || host.equals(object))
+					//					Uri.parse(url).getHost()
 					mWebView.goBack();
 					return true;
 				}
@@ -122,14 +132,11 @@ public class FragmentOnline extends FragmentBase implements OnItemClickListener 
 		public View getView(int position, View convertView, ViewGroup parent) {
 			final String[] f = getItem(position);
 			if (convertView == null) {
-				final LayoutInflater mInflater = getActivity()
-						.getLayoutInflater();
-				convertView = mInflater.inflate(R.layout.fragment_online_item,
-						null);
+				final LayoutInflater mInflater = getActivity().getLayoutInflater();
+				convertView = mInflater.inflate(R.layout.fragment_online_item, null);
 			}
 
-			((ImageView) convertView.findViewById(R.id.thumbnail))
-					.setImageResource(mOnlineLogoList.get(position));
+			((ImageView) convertView.findViewById(R.id.thumbnail)).setImageResource(mOnlineLogoList.get(position));
 			((TextView) convertView.findViewById(R.id.title)).setText(f[0]);
 
 			return convertView;

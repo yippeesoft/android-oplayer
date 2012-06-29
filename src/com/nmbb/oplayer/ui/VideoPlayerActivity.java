@@ -63,7 +63,7 @@ public class VideoPlayerActivity extends Activity implements OnCompletionListene
 			path = intent.getData().toString();
 
 		Log.e("VideoPlayerActivity", path);
-		
+
 		setContentView(R.layout.videoview);
 		mVideoView = (VideoView) findViewById(R.id.surface_view);
 		mVolumeBrightnessLayout = findViewById(R.id.operation_volume_brightness);
@@ -78,12 +78,12 @@ public class VideoPlayerActivity extends Activity implements OnCompletionListene
 			mVideoView.setVideoPath(path);
 		//
 		mVideoView.setOnCompletionListener(this);
-		
+
 		mMediaController = new MediaController(this);
 		mVideoView.setMediaController(mMediaController);
 		mVideoView.requestFocus();
-//		mVideoView.
-//		MediaPlayer
+		//		mVideoView.
+		//		MediaPlayer
 		mGestureDetector = new GestureDetector(this, new MyGestureListener());
 
 		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
@@ -94,7 +94,7 @@ public class VideoPlayerActivity extends Activity implements OnCompletionListene
 		super.onPause();
 		mVideoView.pause();
 	}
-	
+
 	@Override
 	protected void onResume() {
 		super.onResume();
@@ -106,7 +106,7 @@ public class VideoPlayerActivity extends Activity implements OnCompletionListene
 		super.onDestroy();
 		mVideoView.stopPlayback();
 	}
-	
+
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
 		if (mGestureDetector.onTouchEvent(event))
@@ -118,7 +118,7 @@ public class VideoPlayerActivity extends Activity implements OnCompletionListene
 			endGesture();
 			break;
 		}
-		
+
 		return super.onTouchEvent(event);
 	}
 
@@ -240,19 +240,6 @@ public class VideoPlayerActivity extends Activity implements OnCompletionListene
 		super.onConfigurationChanged(newConfig);
 	}
 
-	
-//	private void release() {
-//		if (isInitialized()) {
-//			if (Build.VERSION.SDK_INT > 13) {
-//				android.os.Process.killProcess(android.os.Process.myPid());
-//			} else {
-//				stopPlayer();
-//				vPlayer.release();
-//				vPlayer.releaseContext();
-//			}
-//		}
-//	}
-	
 	@Override
 	public void onCompletion(MediaPlayer player) {
 		finish();

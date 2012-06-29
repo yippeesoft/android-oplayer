@@ -1,6 +1,7 @@
 package com.nmbb.oplayer.ui;
 
 import com.nmbb.oplayer.R;
+import com.nmbb.oplayer.ui.helper.FileDownloadHelper;
 
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -11,12 +12,12 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.RadioButton;
 
-public class MainFragmentActivity extends FragmentActivity implements
-		OnClickListener {
+public class MainFragmentActivity extends FragmentActivity implements OnClickListener {
 
 	private ViewPager mPager;
 	private RadioButton mRadioFile;
 	private RadioButton mRadioOnline;
+	public FileDownloadHelper mFileDownload;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -44,14 +45,20 @@ public class MainFragmentActivity extends FragmentActivity implements
 		else
 			super.onBackPressed();
 	}
-	
+
+	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		if (mFileDownload != null)
+			mFileDownload.stopALl();
+	}
+
 	/** 查找Fragment */
 	private FragmentBase getFragmentByPosition(int position) {
 		return (FragmentBase) getSupportFragmentManager().findFragmentByTag("android:switcher:" + mPager.getId() + ":" + position);
 	}
 
-	private FragmentPagerAdapter mAdapter = new FragmentPagerAdapter(
-			getSupportFragmentManager()) {
+	private FragmentPagerAdapter mAdapter = new FragmentPagerAdapter(getSupportFragmentManager()) {
 
 		/** 仅执行一次 */
 		@Override
@@ -64,6 +71,7 @@ public class MainFragmentActivity extends FragmentActivity implements
 			case 0:
 			default:
 				result = new FragmentFile();// 本地视频
+				mFileDownload = new FileDownloadHelper(((FragmentFile) result).mDownloadHandler);
 				break;
 			}
 			return result;
@@ -73,7 +81,6 @@ public class MainFragmentActivity extends FragmentActivity implements
 		public int getCount() {
 			return 2;
 		}
-
 	};
 
 	private ViewPager.SimpleOnPageChangeListener mPagerListener = new ViewPager.SimpleOnPageChangeListener() {

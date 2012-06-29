@@ -2,26 +2,23 @@ package com.nmbb.oplayer.ui;
 
 import java.io.File;
 import java.util.ArrayList;
-
-import net.sourceforge.pinyin4j.format.exception.BadHanyuPinyinOutputFormatCombination;
+import java.util.HashMap;
 
 import com.nmbb.oplayer.R;
 import com.nmbb.oplayer.business.FileBusiness;
 import com.nmbb.oplayer.database.SQLiteHelper;
-import com.nmbb.oplayer.database.TableColumns.FilesColumns;
 import com.nmbb.oplayer.po.PFile;
 import com.nmbb.oplayer.ui.base.ArrayAdapter;
+import com.nmbb.oplayer.ui.helper.FileDownloadHelper;
 import com.nmbb.oplayer.util.FileUtils;
-import com.nmbb.oplayer.util.PinyinUtils;
-
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
-import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteStatement;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -30,29 +27,36 @@ import android.view.View.OnTouchListener;
 import android.widget.AdapterView;
 import android.widget.ImageView;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class FragmentFile extends FragmentBase implements OnItemClickListener {
 
 	private FileAdapter mAdapter;
+	private FileAdapter mDownloadAdapter;
 	private TextView first_letter_overlay;
 	private ImageView alphabet_scroller;
+	/** 临时列表 */
+	private ListView mTempListView;
+	private MainFragmentActivity mParent;
 
 	@Override
-	public View onCreateView(LayoutInflater inflater, ViewGroup container,
-			Bundle savedInstanceState) {
+	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 		View v = super.onCreateView(inflater, container, savedInstanceState);
 		// ~~~~~~~~~ 绑定控件
-		first_letter_overlay = (TextView) v
-				.findViewById(R.id.first_letter_overlay);
+		first_letter_overlay = (TextView) v.findViewById(R.id.first_letter_overlay);
 		alphabet_scroller = (ImageView) v.findViewById(R.id.alphabet_scroller);
+		mTempListView = (ListView) v.findViewById(R.id.templist);
 
 		// ~~~~~~~~~ 绑定事件
 		alphabet_scroller.setClickable(true);
 		alphabet_scroller.setOnTouchListener(asOnTouch);
 		mListView.setOnItemClickListener(this);
+		mTempListView.setOnItemClickListener(this);
 
 		// ~~~~~~~~~ 加载数据
+		mParent = (MainFragmentActivity) getActivity();
 		if (new SQLiteHelper(getActivity()).isEmpty())
 			new ScanVideoTask().execute();
 		else
@@ -61,11 +65,54 @@ public class FragmentFile extends FragmentBase implements OnItemClickListener {
 		return v;
 	}
 
+	public Handler mDownloadHandler = new Handler() {
+		@Override
+		public void handleMessage(Message msg) {
+			PFile p;
+			String url = msg.obj.toString();
+			switch (msg.what) {
+			case FileDownloadHelper.MESSAGE_START://开始下载
+				p = new PFile();
+				p.path = mParent.mFileDownload.mDownloadUrls.get(url);
+				p.title = new File(p.path).getName();
+				p.status = 0;
+				p.file_size = 0;
+				if (mDownloadAdapter == null) {
+					mDownloadAdapter = new FileAdapter(getActivity(), new ArrayList<PFile>());
+					mDownloadAdapter.add(p, url);
+					mTempListView.setAdapter(mDownloadAdapter);
+					mTempListView.setVisibility(View.VISIBLE);
+				} else {
+					mDownloadAdapter.add(p, url);
+					mDownloadAdapter.notifyDataSetChanged();
+				}
+				break;
+			case FileDownloadHelper.MESSAGE_PROGRESS://正在下载
+				p = mDownloadAdapter.getItem(url);
+				p.temp_file_size = msg.arg1;
+				p.file_size = msg.arg2;
+				int status = (int) ((msg.arg1 * 1.0 / msg.arg2) * 10);
+				if (status > 10)
+					status = 10;
+				p.status = status;
+				mDownloadAdapter.notifyDataSetChanged();
+				break;
+			case FileDownloadHelper.MESSAGE_STOP://下载结束
+				p = mDownloadAdapter.getItem(url);
+				FileBusiness.insertFile(getActivity(), p);
+				break;
+			case FileDownloadHelper.MESSAGE_ERROR:
+				Toast.makeText(getActivity(), url, Toast.LENGTH_LONG).show();
+				break;
+			}
+			super.handleMessage(msg);
+		}
+	};
+
 	/** 单击启动播放 */
 	@Override
-	public void onItemClick(AdapterView<?> parent, View view, int position,
-			long id) {
-		final PFile f = mAdapter.getItem(position);
+	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+		final PFile f = parent == mListView ? mAdapter.getItem(position) : mDownloadAdapter.getItem(position);
 		Intent intent = new Intent(getActivity(), VideoPlayerActivity.class);
 		intent.putExtra("path", f.path);
 		startActivity(intent);
@@ -89,8 +136,7 @@ public class FragmentFile extends FragmentBase implements OnItemClickListener {
 		protected void onPostExecute(ArrayList<PFile> result) {
 			super.onPostExecute(result);
 
-			mAdapter = new FileAdapter(getActivity(),
-					FileBusiness.getAllSortFiles(getActivity()));
+			mAdapter = new FileAdapter(getActivity(), FileBusiness.getAllSortFiles(getActivity()));
 			mListView.setAdapter(mAdapter);
 
 			mLoadingLayout.setVisibility(View.GONE);
@@ -117,37 +163,7 @@ public class FragmentFile extends FragmentBase implements OnItemClickListener {
 			eachAllMedias(Environment.getExternalStorageDirectory());
 
 			// ~~~ 入库
-			SQLiteHelper sqlite = new SQLiteHelper(getActivity());
-			SQLiteDatabase db = sqlite.getWritableDatabase();
-			try {
-				db.beginTransaction();
-
-				SQLiteStatement stat = db.compileStatement("INSERT INTO files("
-						+ FilesColumns.COL_TITLE + ","
-						+ FilesColumns.COL_TITLE_PINYIN + ","
-						+ FilesColumns.COL_PATH + ","
-						+ FilesColumns.COL_LAST_ACCESS_TIME + ","
-						+ FilesColumns.COL_FILE_SIZE + ") VALUES(?,?,?,?,?)");
-				for (File f : files) {
-					String name = f.getName();
-					int index = 1;
-					stat.bindString(index++, name);// title
-					stat.bindString(index++,
-							PinyinUtils.chineneToSpell(name.charAt(0) + ""));// title_pinyin
-					stat.bindString(index++, f.getPath());// path
-					stat.bindLong(index++, System.currentTimeMillis());// last_access_time
-					stat.bindLong(index++, f.length());
-					stat.execute();
-				}
-				db.setTransactionSuccessful();
-			} catch (BadHanyuPinyinOutputFormatCombination e) {
-				e.printStackTrace();
-			} catch (Exception e) {
-				e.printStackTrace();
-			} finally {
-				db.endTransaction();
-				db.close();
-			}
+			FileBusiness.batchInsertFiles(getActivity(), files);
 
 			// ~~~ 查询数据
 			return FileBusiness.getAllSortFiles(getActivity());
@@ -167,8 +183,7 @@ public class FragmentFile extends FragmentBase implements OnItemClickListener {
 						publishProgress(file);
 						if (file.isDirectory()) {
 							eachAllMedias(file);
-						} else if (file.exists() && file.canRead()
-								&& FileUtils.isVideo(file)) {
+						} else if (file.exists() && file.canRead() && FileUtils.isVideo(file)) {
 							this.files.add(file);
 						}
 					}
@@ -187,27 +202,96 @@ public class FragmentFile extends FragmentBase implements OnItemClickListener {
 
 	private class FileAdapter extends ArrayAdapter<PFile> {
 
+		private HashMap<String, PFile> maps = new HashMap<String, PFile>();
+
 		public FileAdapter(Context ctx, ArrayList<PFile> l) {
 			super(ctx, l);
+			maps.clear();
 		}
 
 		@Override
 		public View getView(int position, View convertView, ViewGroup parent) {
 			final PFile f = getItem(position);
 			if (convertView == null) {
-				final LayoutInflater mInflater = getActivity()
-						.getLayoutInflater();
-				convertView = mInflater.inflate(R.layout.fragment_file_item,
-						null);
+				final LayoutInflater mInflater = getActivity().getLayoutInflater();
+				convertView = mInflater.inflate(R.layout.fragment_file_item, null);
 			}
 			((TextView) convertView.findViewById(R.id.title)).setText(f.title);
-			((TextView) convertView.findViewById(R.id.file_size))
-					.setText(FileUtils.showFileSize(f.file_size));
-
-			//
+			
+			//显示文件大小
+			String file_size ;
+			if (f.temp_file_size > 0) {
+				file_size = FileUtils.showFileSize(f.temp_file_size) + " / " +FileUtils.showFileSize(f.file_size);
+			} else {
+				file_size = FileUtils.showFileSize(f.file_size);
+			}
+			((TextView) convertView.findViewById(R.id.file_size)).setText(file_size);
+			
+			//显示进度表
+			final ImageView status = (ImageView) convertView.findViewById(R.id.status);
+			if (f.status > -1) {
+				int resStauts = getStatusImage(f.status);
+				if (resStauts > 0) {
+					if (status.getVisibility() != View.VISIBLE)
+						status.setVisibility(View.VISIBLE);
+					status.setImageResource(resStauts);
+				}
+			} else {
+				if (status.getVisibility() != View.GONE)
+					status.setVisibility(View.GONE);
+			}
 			return convertView;
 		}
 
+		public void add(PFile item, String url) {
+			super.add(item);
+			if (!maps.containsKey(url))
+				maps.put(url, item);
+		}
+
+		public PFile getItem(String url) {
+			return maps.get(url);
+		}
+	}
+
+	private int getStatusImage(int status) {
+		int resStauts = -1;
+		switch (status) {
+		case 0:
+			resStauts = R.drawable.down_btn_0;
+			break;
+		case 1:
+			resStauts = R.drawable.down_btn_1;
+			break;
+		case 2:
+			resStauts = R.drawable.down_btn_2;
+			break;
+		case 3:
+			resStauts = R.drawable.down_btn_3;
+			break;
+		case 4:
+			resStauts = R.drawable.down_btn_4;
+			break;
+		case 5:
+			resStauts = R.drawable.down_btn_5;
+			break;
+		case 6:
+			resStauts = R.drawable.down_btn_6;
+			break;
+		case 7:
+			resStauts = R.drawable.down_btn_7;
+			break;
+		case 8:
+			resStauts = R.drawable.down_btn_8;
+			break;
+		case 9:
+			resStauts = R.drawable.down_btn_9;
+			break;
+		case 10:
+			resStauts = R.drawable.down_btn_10;
+			break;
+		}
+		return resStauts;
 	}
 
 	/**

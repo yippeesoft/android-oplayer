@@ -49,6 +49,18 @@ public class FileUtils {
 		return null;
 	}
 
+	public static String getUrlFileName(String url) {
+		int slashIndex = url.lastIndexOf('/');
+		int dotIndex = url.lastIndexOf('.');
+		String filenameWithoutExtension;
+		if (dotIndex == -1) {
+			filenameWithoutExtension = url.substring(slashIndex + 1);
+		} else {
+			filenameWithoutExtension = url.substring(slashIndex + 1, dotIndex);
+		}
+		return filenameWithoutExtension;
+	}
+
 	public static String getUrlExtension(String url) {
 		if (!StringUtils.isEmpty(url)) {
 			int i = url.lastIndexOf('.');

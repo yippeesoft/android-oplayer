@@ -57,17 +57,20 @@ public class PlayerActivity extends Activity implements OnBufferingUpdateListene
 		}
 	}
 
-	public void onBufferingUpdate(MediaPlayer arg0, int percent) {
+	@Override
+  public void onBufferingUpdate(MediaPlayer arg0, int percent) {
 		Log.d(TAG, "onBufferingUpdate percent:" + percent);
 
 	}
 
-	public void onCompletion(MediaPlayer arg0) {
+	@Override
+  public void onCompletion(MediaPlayer arg0) {
 		Log.d(TAG, "onCompletion called");
 		mMediaPlayer.release();
 	}
 
-	public void onVideoSizeChanged(MediaPlayer mp, int width, int height) {
+	@Override
+  public void onVideoSizeChanged(MediaPlayer mp, int width, int height) {
 		Log.v(TAG, "onVideoSizeChanged called");
 		if (width == 0 || height == 0) {
 			Log.e(TAG, "invalid video width(" + width + ") or height(" + height + ")");
@@ -81,7 +84,8 @@ public class PlayerActivity extends Activity implements OnBufferingUpdateListene
 		}
 	}
 
-	public void onPrepared(MediaPlayer mediaplayer) {
+	@Override
+  public void onPrepared(MediaPlayer mediaplayer) {
 		Log.d(TAG, "onPrepared called");
 		mIsVideoReadyToBePlayed = true;
 		if (mIsVideoReadyToBePlayed && mIsVideoSizeKnown) {
@@ -89,15 +93,18 @@ public class PlayerActivity extends Activity implements OnBufferingUpdateListene
 		}
 	}
 
-	public void surfaceChanged(SurfaceHolder surfaceholder, int i, int j, int k) {
+	@Override
+  public void surfaceChanged(SurfaceHolder surfaceholder, int i, int j, int k) {
 		Log.d(TAG, "surfaceChanged called" + i + "  " + j + "   " + k);
 	}
 
-	public void surfaceDestroyed(SurfaceHolder surfaceholder) {
+	@Override
+  public void surfaceDestroyed(SurfaceHolder surfaceholder) {
 		Log.d(TAG, "surfaceDestroyed called");
 	}
 
-	public void surfaceCreated(SurfaceHolder holder) {
+	@Override
+  public void surfaceCreated(SurfaceHolder holder) {
 		Log.d(TAG, "surfaceCreated called");
 		playVideo();
 	}

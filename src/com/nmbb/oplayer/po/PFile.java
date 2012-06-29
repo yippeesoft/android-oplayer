@@ -18,4 +18,8 @@ public final class PFile {
 	public String thumb;
 	/** 文件大小 */
 	public long file_size;
+	/** 文件状态0 - 10 分别代表 下载 0-100% */
+	public int status = -1;
+	/** 文件临时大小 用于下载 */
+	public long temp_file_size = -1L;
 }
