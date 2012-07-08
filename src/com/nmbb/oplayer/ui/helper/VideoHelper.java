@@ -51,7 +51,7 @@ public class VideoHelper {
 		return result;
 	}
 
-	private static String substring(String search, String start, String end, String defaultValue) {
+	public static String substring(String search, String start, String end, String defaultValue) {
 		int s_len = start.length();
 		int s_pos = StringUtils.isEmpty(start) ? 0 : search.indexOf(start);
 		if (s_pos > -1) {
@@ -64,7 +64,7 @@ public class VideoHelper {
 		return defaultValue;
 	}
 
-	private static String substring(String search, String start, String end) {
+	public static String substring(String search, String start, String end) {
 		return substring(search, start, end, "");
 	}
 

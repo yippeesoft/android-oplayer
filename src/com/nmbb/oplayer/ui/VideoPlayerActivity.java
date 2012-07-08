@@ -22,7 +22,6 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.Display;
 import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.GestureDetector;
@@ -34,7 +33,8 @@ import android.widget.ImageView;
 
 public class VideoPlayerActivity extends Activity implements OnCompletionListener {
 
-	private String path;
+	private String mPath;
+	private String mTitle;
 	private VideoView mVideoView;
 	private View mVolumeBrightnessLayout;
 	private ImageView mOperationBg;
@@ -56,14 +56,13 @@ public class VideoPlayerActivity extends Activity implements OnCompletionListene
 		super.onCreate(icicle);
 
 		Intent intent = getIntent();
-		path = intent.getStringExtra("path");
-		if (TextUtils.isEmpty(path))
-			path = Environment.getExternalStorageDirectory() + "/video/你太猖狂.flv";
+		mPath = intent.getStringExtra("path");
+		mTitle = intent.getStringExtra("title");
+		if (TextUtils.isEmpty(mPath))
+			mPath = Environment.getExternalStorageDirectory() + "/video/你太猖狂.flv";
 		else if (intent.getData() != null)
-			path = intent.getData().toString();
-
-		Log.e("VideoPlayerActivity", path);
-
+			mPath = intent.getData().toString();
+		
 		setContentView(R.layout.videoview);
 		mVideoView = (VideoView) findViewById(R.id.surface_view);
 		mVolumeBrightnessLayout = findViewById(R.id.operation_volume_brightness);
@@ -72,18 +71,19 @@ public class VideoPlayerActivity extends Activity implements OnCompletionListene
 
 		mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 		mMaxVolume = mAudioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
-		if (path.startsWith("http:"))
-			mVideoView.setVideoURI(Uri.parse(path));
+		if (mPath.startsWith("http:"))
+			mVideoView.setVideoURI(Uri.parse(mPath));
 		else
-			mVideoView.setVideoPath(path);
+			mVideoView.setVideoPath(mPath);
 		//
 		mVideoView.setOnCompletionListener(this);
 
 		mMediaController = new MediaController(this);
+		//设置显示名称
+		mMediaController.setFileName(mTitle);
 		mVideoView.setMediaController(mMediaController);
 		mVideoView.requestFocus();
-		//		mVideoView.
-		//		MediaPlayer
+		
 		mGestureDetector = new GestureDetector(this, new MyGestureListener());
 
 		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);

@@ -11,20 +11,27 @@ import com.nmbb.oplayer.po.PFile;
 import com.nmbb.oplayer.ui.base.ArrayAdapter;
 import com.nmbb.oplayer.ui.helper.FileDownloadHelper;
 import com.nmbb.oplayer.util.FileUtils;
+
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
+import android.view.ContextMenu;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ContextMenu.ContextMenuInfo;
 import android.view.View.OnTouchListener;
 import android.widget.AdapterView;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ListView;
@@ -40,6 +47,7 @@ public class FragmentFile extends FragmentBase implements OnItemClickListener {
 	/** 临时列表 */
 	private ListView mTempListView;
 	private MainFragmentActivity mParent;
+	private TextView mSDAvailable;
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -48,12 +56,15 @@ public class FragmentFile extends FragmentBase implements OnItemClickListener {
 		first_letter_overlay = (TextView) v.findViewById(R.id.first_letter_overlay);
 		alphabet_scroller = (ImageView) v.findViewById(R.id.alphabet_scroller);
 		mTempListView = (ListView) v.findViewById(R.id.templist);
+		mSDAvailable = (TextView) v.findViewById(R.id.sd_block);
 
 		// ~~~~~~~~~ 绑定事件
 		alphabet_scroller.setClickable(true);
 		alphabet_scroller.setOnTouchListener(asOnTouch);
 		mListView.setOnItemClickListener(this);
 		mTempListView.setOnItemClickListener(this);
+		mListView.setOnCreateContextMenuListener(OnListViewMenu);
+		mTempListView.setOnCreateContextMenuListener(OnTempListViewMenu);
 
 		// ~~~~~~~~~ 加载数据
 		mParent = (MainFragmentActivity) getActivity();
@@ -63,6 +74,105 @@ public class FragmentFile extends FragmentBase implements OnItemClickListener {
 			new DataTask().execute();
 
 		return v;
+	}
+
+	@Override
+	public void onResume() {
+		super.onResume();
+
+		//SD卡剩余数量
+		mSDAvailable.setText(FileUtils.showFileAvailable());
+	}
+
+	ListView.OnCreateContextMenuListener OnListViewMenu = new ListView.OnCreateContextMenuListener() {
+		@Override
+		public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
+			menu.setHeaderTitle(R.string.file_oper);
+			menu.add(0, 0, 0, R.string.file_rename);
+			menu.add(0, 1, 0, R.string.file_delete);
+		}
+	};
+
+	ListView.OnCreateContextMenuListener OnTempListViewMenu = new ListView.OnCreateContextMenuListener() {
+
+		@Override
+		public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
+			menu.setHeaderTitle(R.string.file_oper);
+			menu.add(0, 2, 0, R.string.file_rename);
+			menu.add(0, 3, 0, R.string.file_delete);
+		}
+	};
+
+	@Override
+	public boolean onContextItemSelected(MenuItem item) {
+		ContextMenuInfo info = item.getMenuInfo();
+		AdapterView.AdapterContextMenuInfo contextMenuInfo = (AdapterView.AdapterContextMenuInfo) info;
+		int position = contextMenuInfo.position;
+		switch (item.getItemId()) {
+		case 0:
+			renameFile(mAdapter, mAdapter.getItem(position), position);
+			break;
+		case 1:
+			deleteFile(mAdapter, mAdapter.getItem(position), position);
+			break;
+		case 2:
+			renameFile(mDownloadAdapter, mDownloadAdapter.getItem(position), position);
+			break;
+		case 3:
+			deleteFile(mDownloadAdapter, mDownloadAdapter.getItem(position), position);
+			break;
+		}
+		return super.onContextItemSelected(item);
+	};
+
+	/** 删除文件 */
+	private void deleteFile(final FileAdapter adapter, final PFile f, final int position) {
+		new AlertDialog.Builder(getActivity()).setIcon(android.R.drawable.ic_dialog_alert).setTitle(R.string.file_delete).setMessage(getString(R.string.file_delete_confirm, f.title)).setNegativeButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				try {
+					File file = new File(f.path);
+					if (file.canRead() && file.exists())
+						file.delete();
+					FileBusiness.deleteFile(getActivity(), f);
+					adapter.delete(position);
+				} catch (Exception e) {
+
+				}
+			}
+
+		}).setPositiveButton(android.R.string.no, null).show();
+	}
+
+	/** 重命名文件 */
+	private void renameFile(final FileAdapter adapter, final PFile f, final int position) {
+		final EditText et = new EditText(getActivity());
+		et.setText(f.title);
+		new AlertDialog.Builder(getActivity()).setTitle(R.string.file_rename).setIcon(android.R.drawable.ic_dialog_info).setView(et).setNegativeButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				String name = et.getText().toString().trim();
+				if (name == null || name.trim().equals("") || name.trim().equals(f.title))
+					return;
+
+				try {
+					File fromFile = new File(f.path);
+					File nf = new File(fromFile.getParent(), name.trim());
+					if (nf.exists()) {
+						Toast.makeText(getActivity(), R.string.file_rename_exists, Toast.LENGTH_LONG).show();
+					} else if (fromFile.renameTo(nf)) {
+						f.title = name;
+						f.path = nf.getPath();
+						FileBusiness.renameFile(getActivity(), f);
+						adapter.notifyDataSetChanged();
+					}
+				} catch (SecurityException se) {
+					Toast.makeText(getActivity(), R.string.file_rename_failed, Toast.LENGTH_LONG).show();
+				}
+			}
+
+		}).setPositiveButton(android.R.string.no, null).show();
 	}
 
 	public Handler mDownloadHandler = new Handler() {
@@ -180,10 +290,10 @@ public class FragmentFile extends FragmentBase implements OnItemClickListener {
 				File[] files = f.listFiles();
 				if (files != null) {
 					for (File file : f.listFiles()) {
-						publishProgress(file);
 						if (file.isDirectory()) {
 							eachAllMedias(file);
 						} else if (file.exists() && file.canRead() && FileUtils.isVideo(file)) {
+							publishProgress(file);
 							this.files.add(file);
 						}
 					}
@@ -217,16 +327,16 @@ public class FragmentFile extends FragmentBase implements OnItemClickListener {
 				convertView = mInflater.inflate(R.layout.fragment_file_item, null);
 			}
 			((TextView) convertView.findViewById(R.id.title)).setText(f.title);
-			
+
 			//显示文件大小
-			String file_size ;
+			String file_size;
 			if (f.temp_file_size > 0) {
-				file_size = FileUtils.showFileSize(f.temp_file_size) + " / " +FileUtils.showFileSize(f.file_size);
+				file_size = FileUtils.showFileSize(f.temp_file_size) + " / " + FileUtils.showFileSize(f.file_size);
 			} else {
 				file_size = FileUtils.showFileSize(f.file_size);
 			}
 			((TextView) convertView.findViewById(R.id.file_size)).setText(file_size);
-			
+
 			//显示进度表
 			final ImageView status = (ImageView) convertView.findViewById(R.id.status);
 			if (f.status > -1) {
@@ -247,6 +357,13 @@ public class FragmentFile extends FragmentBase implements OnItemClickListener {
 			super.add(item);
 			if (!maps.containsKey(url))
 				maps.put(url, item);
+		}
+
+		public void delete(int position) {
+			synchronized (mLock) {
+				mObjects.remove(position);
+			}
+			notifyDataSetChanged();
 		}
 
 		public PFile getItem(String url) {

@@ -1,7 +1,9 @@
 package com.nmbb.oplayer.ui;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
-
+import java.util.List;
 import com.nmbb.oplayer.R;
 import com.nmbb.oplayer.ui.base.ArrayAdapter;
 import com.nmbb.oplayer.util.FileUtils;
@@ -12,7 +14,10 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.os.Environment;
+import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -35,12 +40,22 @@ public class FragmentOnline extends FragmentBase implements OnItemClickListener 
 	private static ArrayList<Integer> mOnlineLogoList = new ArrayList<Integer>();
 	private WebView mWebView;
 	private ListView mListView;
+	/** 网页正在加载 */
+	private View mLoading;
+	/** 历史记录 */
+	private List<String> mHistory = new ArrayList<String>();
+	/** 显示当前正在加载的url */
+	private TextView mUrl;
+	private String mTitle;
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 		View mView = inflater.inflate(R.layout.fragment_online, container, false);
 		mListView = (ListView) mView.findViewById(android.R.id.list);
 		mWebView = (WebView) mView.findViewById(R.id.webview);
+		mUrl = (TextView) mView.findViewById(R.id.url);
+		mLoading = mView.findViewById(R.id.loading);
+
 		mListView.setOnItemClickListener(this);
 		initWebView();
 		mListView.setAdapter(new DataAdapter(getActivity()));
@@ -50,9 +65,12 @@ public class FragmentOnline extends FragmentBase implements OnItemClickListener 
 	@Override
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 		final String[] f = mOnlineList.get(position);
-		mWebView.loadUrl(f[1]);
+		mLoading.setVisibility(View.VISIBLE);
+		mWebView.setVisibility(View.GONE);
 		mListView.setVisibility(View.GONE);
-		mWebView.setVisibility(View.VISIBLE);
+		mHistory.clear();
+		mWebView.clearView();
+		mWebView.loadUrl(f[1]);
 	}
 
 	@Override
@@ -60,10 +78,11 @@ public class FragmentOnline extends FragmentBase implements OnItemClickListener 
 		if (mListView == null || mListView.getVisibility() == View.VISIBLE)
 			return super.onBackPressed();
 		else {
-			mWebView.clearHistory();
 			mWebView.clearView();
+			mUrl.setVisibility(View.GONE);
 			mListView.setVisibility(View.VISIBLE);
 			mWebView.setVisibility(View.GONE);
+			mLoading.setVisibility(View.GONE);
 			return true;
 		}
 	}
@@ -76,8 +95,25 @@ public class FragmentOnline extends FragmentBase implements OnItemClickListener 
 
 		mWebView.setWebViewClient(new WebViewClient() {
 
+			/** 页面开始加载 */
+			@Override
+			public void onPageStarted(WebView view, String url, Bitmap favicon) {
+				super.onPageStarted(view, url, favicon);
+				mUrl.setText(url);
+				mUrl.setVisibility(View.VISIBLE);
+			}
+
+			/** 页面加载完成 */
 			@Override
 			public void onPageFinished(WebView view, String url) {
+				super.onPageFinished(view, url);
+				mLoading.setVisibility(View.GONE);
+				mWebView.setVisibility(View.VISIBLE);
+				if (!mHistory.contains(url))
+					mHistory.add(0, url);
+				mUrl.setVisibility(View.GONE);
+				//取得title
+				mTitle = view.getTitle();
 			};
 
 			/** 页面跳转 */
@@ -89,14 +125,25 @@ public class FragmentOnline extends FragmentBase implements OnItemClickListener 
 						public void onClick(DialogInterface dialog, int which) {
 							Intent intent = new Intent(getActivity(), VideoPlayerActivity.class);
 							intent.putExtra("path", url);
+							intent.putExtra("title", mTitle);
 							startActivity(intent);
 						}
 					}).setNeutralButton("下载", new OnClickListener() {
 						@Override
 						public void onClick(DialogInterface dialog, int which) {
-							MainFragmentActivity activity = (MainFragmentActivity) getActivity();
-							activity.mFileDownload.newDownloadFile(url);
-							Toast.makeText(getActivity(), "正在下载 .." + FileUtils.getUrlFileName(url) + " ，可从本地视频查看进度！", Toast.LENGTH_LONG).show();
+							if (Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
+								MainFragmentActivity activity = (MainFragmentActivity) getActivity();
+								String savePath = Environment.getExternalStorageDirectory() + "/";
+								if (TextUtils.isEmpty(mTitle))
+									savePath += FileUtils.getUrlFileName(url);
+								else {
+									savePath += mTitle + "." + FileUtils.getUrlExtension(url);
+								}
+								activity.mFileDownload.newDownloadFile(url, savePath);
+								Toast.makeText(getActivity(), "正在下载 .." + FileUtils.getUrlFileName(savePath) + " ，可从本地视频查看进度！", Toast.LENGTH_LONG).show();
+							} else {
+								Toast.makeText(getActivity(), "请检测SD卡!", Toast.LENGTH_LONG).show();
+							}
 						}
 					}).setNegativeButton("取消", null).create();
 					dialog.show();
@@ -106,22 +153,23 @@ public class FragmentOnline extends FragmentBase implements OnItemClickListener 
 			};
 		});
 
+		/** 处理后退键 */
 		mWebView.setOnKeyListener(new OnKeyListener() {
-			private String host;
-
 			@Override
 			public boolean onKey(View v, int keyCode, KeyEvent event) {
 				if ((keyCode == KeyEvent.KEYCODE_BACK) && mWebView != null && mWebView.canGoBack()) {
-					//					if(StringUtils.isEmpty(host) || host.equals(object))
-					//					Uri.parse(url).getHost()
-					mWebView.goBack();
-					return true;
+					if (mHistory.size() > 1) {
+						mHistory.remove(0);
+						mWebView.loadUrl(mHistory.get(0));
+						return true;
+					}
 				}
 				return false;
 			}
 		});
 	}
 
+	/** 数据适配 */
 	private class DataAdapter extends ArrayAdapter<String[]> {
 
 		public DataAdapter(Context ctx) {
@@ -142,6 +190,41 @@ public class FragmentOnline extends FragmentBase implements OnItemClickListener 
 			return convertView;
 		}
 
+	}
+
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 处理FLASH退出的问题 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	private void callHiddenWebViewMethod(String name) {
+		if (mWebView != null) {
+			try {
+				Method method = WebView.class.getMethod(name);
+				method.invoke(mWebView);
+			} catch (NoSuchMethodException e) {
+			} catch (IllegalAccessException e) {
+			} catch (InvocationTargetException e) {
+			}
+		}
+	}
+
+	@Override
+	public void onPause() {
+		super.onPause();
+		if (mWebView != null) {
+			mWebView.pauseTimers();
+			if (getActivity().isFinishing()) {
+				mWebView.loadUrl("about:blank");
+			}
+			callHiddenWebViewMethod("onPause");
+		}
+	}
+
+	@Override
+	public void onResume() {
+		super.onResume();
+		if (mWebView != null) {
+			mWebView.resumeTimers();
+			callHiddenWebViewMethod("onResume");
+		}
 	}
 
 	static {

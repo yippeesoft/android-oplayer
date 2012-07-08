@@ -62,6 +62,44 @@ public final class FileBusiness {
 		});
 		return result;
 	}
+	
+	/** 重命名文件 */
+	public static void renameFile(final Context ctx, final PFile p) {
+		SQLiteHelper sqlite = new SQLiteHelper(ctx);
+		SQLiteDatabase db = sqlite.getWritableDatabase();
+		try {
+			ContentValues values = new ContentValues();
+			values.put(FilesColumns.COL_TITLE, p.title);
+			values.put(FilesColumns.COL_TITLE_PINYIN, PinyinUtils.chineneToSpell(p.title.charAt(0) + ""));
+			values.put(FilesColumns.COL_PATH, p.path);
+			db.update(TABLE_NAME, values, FilesColumns.COL_ID + " = ?", new String[] { p._id + "" });
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				db.close();
+			} catch (Exception e) {
+			}
+		}
+	}
+
+	/** 删除文件 */
+	public static int deleteFile(final Context ctx, final PFile p) {
+		SQLiteHelper sqlite = new SQLiteHelper(ctx);
+		SQLiteDatabase db = sqlite.getWritableDatabase();
+		int result = -1;
+		try {
+			result = db.delete(TABLE_NAME, FilesColumns.COL_ID + " = ?", new String[] { p._id + "" });
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				db.close();
+			} catch (Exception e) {
+			}
+		}
+		return result;
+	}
 
 	public static void insertFile(final Context ctx, final PFile p) {
 		SQLiteHelper sqlite = new SQLiteHelper(ctx);

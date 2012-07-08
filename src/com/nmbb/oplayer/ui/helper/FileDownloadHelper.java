@@ -15,12 +15,10 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 
-import android.os.Environment;
 import android.os.Handler;
 import android.util.Log;
 
 import com.nmbb.oplayer.ui.base.ThreadPool;
-import com.nmbb.oplayer.util.FileUtils;
 
 public class FileDownloadHelper {
 	private static final String TAG = "FileDownloadHelper";
@@ -49,10 +47,6 @@ public class FileDownloadHelper {
 	public void stopALl() {
 		mIsStop = true;
 		mPool.stop();
-	}
-
-	public void newDownloadFile(final String url) {
-		newDownloadFile(url, Environment.getExternalStorageDirectory() + "/" + FileUtils.getUrlFileName(url));
 	}
 
 	/**

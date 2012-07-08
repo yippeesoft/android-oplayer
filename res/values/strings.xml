@@ -7,4 +7,11 @@
 	<string name="title_online">在线视频</string>
 	
 	<string name="loadinfo">载入中，请稍后...</string>
+	
+	<string name="file_oper">文件操作</string>
+	<string name="file_rename">重命名</string>
+	<string name="file_rename_failed">重命名失败</string>
+	<string name="file_rename_exists">文件已存在</string>
+	<string name="file_delete">删除</string>
+	<string name="file_delete_confirm">确定删除 (%s) ？</string>
 </resources>

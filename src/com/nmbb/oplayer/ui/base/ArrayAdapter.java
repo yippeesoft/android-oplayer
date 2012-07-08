@@ -12,6 +12,7 @@ public abstract class ArrayAdapter<T> extends BaseAdapter {
 	// 数据
 	protected ArrayList<T> mObjects;
 	protected LayoutInflater mInflater;
+	protected final Object mLock = new Object();
 
 	public ArrayAdapter(final Context ctx, final ArrayList<T> l) {
 		mObjects = l == null ? new ArrayList<T>() : l;
