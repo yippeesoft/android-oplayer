@@ -55,6 +55,9 @@ public class VideoPlayerActivity extends Activity implements OnCompletionListene
 	public void onCreate(Bundle icicle) {
 		super.onCreate(icicle);
 
+		if (!io.vov.vitamio.LibsChecker.checkVitamioLibs(this, getClass().getName(), R.string.init_decoders, R.raw.libarm))
+			return;
+
 		Intent intent = getIntent();
 		mPath = intent.getStringExtra("path");
 		mTitle = intent.getStringExtra("title");
@@ -62,7 +65,7 @@ public class VideoPlayerActivity extends Activity implements OnCompletionListene
 			mPath = Environment.getExternalStorageDirectory() + "/video/你太猖狂.flv";
 		else if (intent.getData() != null)
 			mPath = intent.getData().toString();
-		
+
 		setContentView(R.layout.videoview);
 		mVideoView = (VideoView) findViewById(R.id.surface_view);
 		mVolumeBrightnessLayout = findViewById(R.id.operation_volume_brightness);
@@ -83,7 +86,7 @@ public class VideoPlayerActivity extends Activity implements OnCompletionListene
 		mMediaController.setFileName(mTitle);
 		mVideoView.setMediaController(mMediaController);
 		mVideoView.requestFocus();
-		
+
 		mGestureDetector = new GestureDetector(this, new MyGestureListener());
 
 		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
@@ -92,19 +95,22 @@ public class VideoPlayerActivity extends Activity implements OnCompletionListene
 	@Override
 	protected void onPause() {
 		super.onPause();
-		mVideoView.pause();
+		if (mVideoView != null)
+			mVideoView.pause();
 	}
 
 	@Override
 	protected void onResume() {
 		super.onResume();
-		mVideoView.resume();
+		if (mVideoView != null)
+			mVideoView.resume();
 	}
 
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
-		mVideoView.stopPlayback();
+		if (mVideoView != null)
+			mVideoView.stopPlayback();
 	}
 
 	@Override
