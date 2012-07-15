@@ -16,7 +16,8 @@ public abstract class ArrayAdapter<T> extends BaseAdapter {
 
 	public ArrayAdapter(final Context ctx, final ArrayList<T> l) {
 		mObjects = l == null ? new ArrayList<T>() : l;
-		mInflater = (LayoutInflater) ctx.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+		mInflater = (LayoutInflater) ctx
+				.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 	}
 
 	@Override
@@ -38,10 +39,17 @@ public abstract class ArrayAdapter<T> extends BaseAdapter {
 		this.mObjects.add(item);
 	}
 
+	public void replace(ArrayList<T> newObjects) {
+		if (newObjects == null)
+			newObjects = new ArrayList<T>();
+		this.mObjects = newObjects;
+	}
+
 	/**
 	 * Adds the specified items at the end of the array.
 	 * 
-	 * @param items The items to add at the end of the array.
+	 * @param items
+	 *            The items to add at the end of the array.
 	 */
 	public void addAll(T... items) {
 		ArrayList<T> values = this.mObjects;

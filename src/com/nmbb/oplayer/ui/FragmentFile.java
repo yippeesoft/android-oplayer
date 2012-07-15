@@ -225,6 +225,7 @@ public class FragmentFile extends FragmentBase implements OnItemClickListener {
 		final PFile f = parent == mListView ? mAdapter.getItem(position) : mDownloadAdapter.getItem(position);
 		Intent intent = new Intent(getActivity(), VideoPlayerActivity.class);
 		intent.putExtra("path", f.path);
+		intent.putExtra("title", f.title);
 		startActivity(intent);
 	}
 
