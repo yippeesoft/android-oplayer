@@ -1,5 +1,8 @@
 package com.nmbb.oplayer.ui;
 
+import io.vov.utils.Log;
+import io.vov.vitamio.VIntent;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -8,12 +11,17 @@ import com.nmbb.oplayer.R;
 import com.nmbb.oplayer.business.FileBusiness;
 import com.nmbb.oplayer.database.SQLiteHelper;
 import com.nmbb.oplayer.po.PFile;
+import com.nmbb.oplayer.receiver.IReceiverNotify;
+import com.nmbb.oplayer.receiver.MediaScannerReceiver;
 import com.nmbb.oplayer.ui.base.ArrayAdapter;
 import com.nmbb.oplayer.ui.helper.FileDownloadHelper;
 import com.nmbb.oplayer.util.FileUtils;
 
+import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.app.ActivityManager.RunningServiceInfo;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -38,7 +46,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class FragmentFile extends FragmentBase implements OnItemClickListener {
+public class FragmentFileOld extends FragmentBase implements OnItemClickListener {
 
 	private FileAdapter mAdapter;
 	private FileAdapter mDownloadAdapter;
@@ -255,62 +263,6 @@ public class FragmentFile extends FragmentBase implements OnItemClickListener {
 		}
 	}
 
-	/** 扫描SD卡 */
-	private class ScanVideoTask extends AsyncTask<Void, File, ArrayList<PFile>> {
-		private ProgressDialog pd;
-		private ArrayList<File> files = new ArrayList<File>();
-
-		@Override
-		protected void onPreExecute() {
-			super.onPreExecute();
-			pd = new ProgressDialog(getActivity());
-			pd.setMessage("正在扫描视频文件...");
-			pd.show();
-		}
-
-		@Override
-		protected ArrayList<PFile> doInBackground(Void... params) {
-			// ~~~ 遍历文件夹
-			eachAllMedias(Environment.getExternalStorageDirectory());
-
-			// ~~~ 入库
-			FileBusiness.batchInsertFiles(getActivity(), files);
-
-			// ~~~ 查询数据
-			return FileBusiness.getAllSortFiles(getActivity());
-		}
-
-		@Override
-		protected void onProgressUpdate(final File... values) {
-			pd.setMessage(values[0].getName());
-		}
-
-		/** 遍历所有文件夹，查找出视频文件 */
-		public void eachAllMedias(File f) {
-			if (f != null && f.exists() && f.isDirectory()) {
-				File[] files = f.listFiles();
-				if (files != null) {
-					for (File file : f.listFiles()) {
-						if (file.isDirectory()) {
-							eachAllMedias(file);
-						} else if (file.exists() && file.canRead() && FileUtils.isVideo(file)) {
-							publishProgress(file);
-							this.files.add(file);
-						}
-					}
-				}
-			}
-		}
-
-		@Override
-		protected void onPostExecute(ArrayList<PFile> result) {
-			super.onPostExecute(result);
-			mAdapter = new FileAdapter(getActivity(), result);
-			mListView.setAdapter(mAdapter);
-			pd.dismiss();
-		}
-	}
-
 	private class FileAdapter extends ArrayAdapter<PFile> {
 
 		private HashMap<String, PFile> maps = new HashMap<String, PFile>();
@@ -475,6 +427,67 @@ public class FragmentFile extends FragmentBase implements OnItemClickListener {
 					position++;
 				}
 			}
+		}
+	}
+
+	// ~~~~~~~~~~~~~~ 后续弃用，直接使用Vitamio提供的
+
+	/** 扫描SD卡 */
+	private class ScanVideoTask extends AsyncTask<Void, File, ArrayList<PFile>> {
+		private ProgressDialog pd;
+		private ArrayList<File> files = new ArrayList<File>();
+
+		@Override
+		protected void onPreExecute() {
+			super.onPreExecute();
+			pd = new ProgressDialog(getActivity());
+			pd.setMessage("正在扫描视频文件...");
+			pd.show();
+		}
+
+		@Override
+		protected ArrayList<PFile> doInBackground(Void... params) {
+			// ~~~ 遍历文件夹
+			eachAllMedias(Environment.getExternalStorageDirectory());
+
+			// ~~~ 提取缩略图、视频尺寸等。
+			FileBusiness.batchBuildThumbnail(getActivity(), files);
+
+			// ~~~ 入库
+			FileBusiness.batchInsertFiles(getActivity(), files);
+
+			// ~~~ 查询数据
+			return FileBusiness.getAllSortFiles(getActivity());
+		}
+
+		@Override
+		protected void onProgressUpdate(final File... values) {
+			pd.setMessage(values[0].getName());
+		}
+
+		/** 遍历所有文件夹，查找出视频文件 */
+		public void eachAllMedias(File f) {
+			if (f != null && f.exists() && f.isDirectory()) {
+				File[] files = f.listFiles();
+				if (files != null) {
+					for (File file : f.listFiles()) {
+						if (file.isDirectory()) {
+							eachAllMedias(file);
+						} else if (file.exists() && file.canRead() && FileUtils.isVideo(file)) {
+							publishProgress(file);
+							this.files.add(file);
+						}
+					}
+				}
+			}
+		}
+
+		@Override
+		protected void onPostExecute(ArrayList<PFile> result) {
+			super.onPostExecute(result);
+			mAdapter = new FileAdapter(getActivity(), result);
+			mListView.setAdapter(mAdapter);
+			pd.dismiss();
 		}
 	}
 }

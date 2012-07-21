@@ -1,6 +1,11 @@
 package com.nmbb.oplayer.business;
 
+import io.vov.utils.Log;
+import io.vov.vitamio.ThumbnailUtils;
+import io.vov.vitamio.provider.MediaStore.Video;
+
 import java.io.File;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -12,6 +17,8 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteStatement;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 
 import com.nmbb.oplayer.database.SQLiteHelper;
 import com.nmbb.oplayer.database.TableColumns.FilesColumns;
@@ -21,6 +28,7 @@ import com.nmbb.oplayer.util.PinyinUtils;
 public final class FileBusiness {
 
 	private static final String TABLE_NAME = "files";
+	private static final String TAG = "FileBusiness";
 
 	/** 获取所有已经排好序的列表 */
 	public static ArrayList<PFile> getAllSortFiles(final Context ctx) {
@@ -62,7 +70,7 @@ public final class FileBusiness {
 		});
 		return result;
 	}
-	
+
 	/** 重命名文件 */
 	public static void renameFile(final Context ctx, final PFile p) {
 		SQLiteHelper sqlite = new SQLiteHelper(ctx);
@@ -120,6 +128,50 @@ public final class FileBusiness {
 			} catch (Exception e) {
 			}
 		}
+	}
+
+	/** 批量提取视频的缩略图已经视频的宽高 */
+	public static ArrayList<PFile> batchBuildThumbnail(final Context ctx, final ArrayList<File> files) {
+		ArrayList<PFile> result = new ArrayList<PFile>();
+
+		for (File f : files) {
+			PFile pf = new PFile();
+			try {
+				if (f.exists() && f.canRead()) {
+					//取出视频的一帧图像
+					Bitmap bitmap = ThumbnailUtils.createVideoThumbnail(ctx, f.getAbsolutePath(), Video.Thumbnails.MINI_KIND);
+					if (bitmap == null) {
+						//缩略图创建失败
+						bitmap = Bitmap.createBitmap(ThumbnailUtils.TARGET_SIZE_MINI_THUMBNAIL_WIDTH, ThumbnailUtils.TARGET_SIZE_MINI_THUMBNAIL_HEIGHT, Bitmap.Config.RGB_565);
+						Log.e(TAG, "batchBuildThumbnail createBitmap faild : " + f.getAbsolutePath());
+					}
+
+					pf.width = bitmap.getWidth();
+					pf.height = bitmap.getHeight();
+
+					//缩略图
+					bitmap = ThumbnailUtils.extractThumbnail(bitmap, ThumbnailUtils.dipToPX(ctx, ThumbnailUtils.TARGET_SIZE_MICRO_THUMBNAIL_WIDTH), ThumbnailUtils.dipToPX(ctx, ThumbnailUtils.TARGET_SIZE_MICRO_THUMBNAIL_HEIGHT), ThumbnailUtils.OPTIONS_RECYCLE_INPUT);
+					if (bitmap != null) {
+						File thum = new File(f.getParent(), f.getName() + ".jpg");
+						pf.thumb = thum.getAbsolutePath();
+						//thum.createNewFile();
+						FileOutputStream iStream = new FileOutputStream(thum);
+						bitmap.compress(Bitmap.CompressFormat.JPEG, 85, iStream);
+						iStream.close();
+					}
+
+					if (bitmap != null)
+						bitmap.recycle();
+				}
+			} catch (Exception e) {
+				Log.e(TAG, e);
+				continue;
+			} finally {
+				result.add(pf);
+			}
+		}
+
+		return result;
 	}
 
 	/** 批量插入数据 */

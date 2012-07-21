@@ -13,7 +13,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class SQLiteHelper extends SQLiteOpenHelper {
 
 	/** 数据库名称 */
-	private final static String NAME = "player.db";
+	private final static String NAME = "oplayer.db";
 	private final static int DATABASE_VERSION = 2;
 	private final static String SQL_CREATE_FILES = "CREATE TABLE \"files\" (" + //
 	    FilesColumns.COL_ID + " INTEGER PRIMARY KEY AUTOINCREMENT," + //

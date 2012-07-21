@@ -4,15 +4,6 @@
     android:layout_height="fill_parent"
     android:orientation="vertical" >
 
-    <TextView
-        android:id="@+id/sd_block"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/sd_bar_bg"
-        android:gravity="right"
-        android:paddingRight="5dip"
-        android:textColor="@color/white" />
-
     <ListView
         android:id="@+id/templist"
         android:layout_width="fill_parent"
@@ -27,7 +18,8 @@
 
     <LinearLayout
         android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
+        android:layout_height="0dip"
+        android:layout_weight="1.0"
         android:orientation="horizontal" >
 
         <FrameLayout
@@ -61,7 +53,7 @@
                 android:textSize="43.0dip"
                 android:visibility="gone" />
 
-            <include layout="@layout/common_loading"/>
+            <include layout="@layout/common_loading" />
         </FrameLayout>
 
         <ImageView
@@ -73,5 +65,30 @@
             android:scaleType="fitXY"
             android:src="@drawable/alphabet_scroller_bg" />
     </LinearLayout>
+
+    <RelativeLayout
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/sd_bar_bg" >
+
+        <ProgressBar
+            android:id="@android:id/progress"
+            style="?android:attr/progressBarStyleSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_centerVertical="true"
+            android:layout_marginLeft="5dip"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/sd_block"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:layout_marginRight="5dip"
+            android:textColor="@color/white" />
+    </RelativeLayout>
 
 </LinearLayout>

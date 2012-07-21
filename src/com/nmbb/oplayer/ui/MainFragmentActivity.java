@@ -1,9 +1,14 @@
 package com.nmbb.oplayer.ui;
 
+import io.vov.vitamio.MediaScannerService;
+
+import com.nmbb.oplayer.OPreference;
 import com.nmbb.oplayer.R;
 import com.nmbb.oplayer.ui.helper.FileDownloadHelper;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentPagerAdapter;
@@ -14,6 +19,7 @@ import android.widget.RadioButton;
 
 public class MainFragmentActivity extends FragmentActivity implements OnClickListener {
 
+	private static final String PREF_KEY_FIRST = "application_first";
 	private ViewPager mPager;
 	private RadioButton mRadioFile;
 	private RadioButton mRadioOnline;
@@ -22,6 +28,17 @@ public class MainFragmentActivity extends FragmentActivity implements OnClickLis
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+
+		if (!io.vov.vitamio.LibsChecker.checkVitamioLibs(this, getClass().getName(), R.string.init_decoders, R.raw.libarm))
+			return;
+
+		OPreference pref = new OPreference(this);
+		//首次运行，扫描SD卡
+		if (pref.getBoolean(PREF_KEY_FIRST, true)) {
+			getApplicationContext().startService(new Intent(getApplicationContext(), MediaScannerService.class).putExtra(MediaScannerService.EXTRA_DIRECTORY, Environment.getExternalStorageDirectory().getAbsolutePath()));
+			pref.putBooleanAndCommit(PREF_KEY_FIRST, false);
+		}
+
 		setContentView(R.layout.fragment_pager);
 
 		// ~~~~~~ 绑定控件
