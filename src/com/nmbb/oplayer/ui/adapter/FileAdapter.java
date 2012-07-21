@@ -31,9 +31,9 @@ public class FileAdapter extends CursorAdapter {
 	}
 
 	@Override
-	public Cursor swapCursor(Cursor newCursor) {
-		initKeys(newCursor);
-	  return super.swapCursor(newCursor);
+	public void changeCursor(Cursor cursor) {
+		initKeys(cursor);
+	  super.changeCursor(cursor);
 	}
 	
 	private void initKeys(Cursor c) {

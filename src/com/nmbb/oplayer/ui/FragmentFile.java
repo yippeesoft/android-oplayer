@@ -214,14 +214,14 @@ public class FragmentFile extends FragmentBase implements LoaderCallbacks<Cursor
 	@Override
 	public void onLoadFinished(Loader<Cursor> arg0, Cursor newCursor) {
 		Log.e(TAG, "onLoadFinished" + newCursor.getCount());
-		mAdapter.swapCursor(newCursor);
+		mAdapter.changeCursor(newCursor);
 		mListView.setSelectionFromTop(mVisiablePosition, mVisiableTop);
 	}
 
 	@Override
 	public void onLoaderReset(Loader<Cursor> arg0) {
 		Log.e(TAG, "onLoaderReset");
-		mAdapter.swapCursor(null);
+		mAdapter.changeCursor(null);
 	}
 
 	ListView.OnCreateContextMenuListener OnListViewMenu = new ListView.OnCreateContextMenuListener() {

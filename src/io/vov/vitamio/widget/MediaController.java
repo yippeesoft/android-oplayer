@@ -126,7 +126,7 @@ public class MediaController extends FrameLayout {
 			removeAllViews();
 			mRoot = makeControllerView();
 			mWindow.setContentView(mRoot);
-			mWindow.setWidth(LayoutParams.MATCH_PARENT);
+			mWindow.setWidth(LayoutParams.FILL_PARENT);
 			mWindow.setHeight(LayoutParams.WRAP_CONTENT);
 		}
 		initControllerView(mRoot);

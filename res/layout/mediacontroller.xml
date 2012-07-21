@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
+    android:layout_width="fill_parent"
     android:layout_height="74dip"
     android:layout_alignParentBottom="true"
     android:layout_marginBottom="0.0dip"
@@ -23,7 +23,7 @@
         android:src="@drawable/mediacontroller_pause_button" />
 
     <RelativeLayout
-        android:layout_width="match_parent"
+        android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="2dip"
         android:layout_marginLeft="7.0dip"
@@ -32,7 +32,7 @@
         android:layout_toLeftOf="@+id/mediacontroller_play_pause" >
 
         <RelativeLayout
-            android:layout_width="match_parent"
+            android:layout_width="fill_parent"
             android:layout_height="wrap_content" >
 
             <TextView
@@ -55,7 +55,7 @@
         <SeekBar
             android:id="@+id/mediacontroller_seekbar"
             style="@style/MediaController_SeekBar"
-            android:layout_width="match_parent"
+            android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
             android:focusable="true"

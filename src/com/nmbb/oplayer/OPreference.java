@@ -1,5 +1,7 @@
 package com.nmbb.oplayer;
 
+import java.util.Map.Entry;
+
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -29,8 +31,8 @@ public class OPreference {
 
 	public boolean putIntAndCommit(ContentValues values) {
 		SharedPreferences.Editor editor = mPreference.edit();
-		for (String key : values.keySet()) {
-			editor.putString(key, values.getAsString(key));
+		for (Entry<String, Object> value : values.valueSet()) {
+			editor.putString(value.getKey(), value.getValue().toString());
 		}
 		return editor.commit();
 	}
